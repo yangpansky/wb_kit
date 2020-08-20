@@ -4,6 +4,8 @@
 @interface WeiboKitPlugin () <WeiboSDKDelegate>
 // yangpan modify
 @property (nonatomic,strong) FlutterMethodChannel *channel;
+@property (nonatomic,copy) NSString *redirectURI;
+@property (nonatomic,copy) NSString *accessToken;
 @end
 
 @implementation WeiboKitPlugin {
@@ -38,7 +40,10 @@
 
 static NSString * const METHOD_REGISTERAPP = @"registerApp";
 static NSString * const METHOD_ISINSTALLED = @"isInstalled";
+static NSString * const METHOD_CANSHAREINWBAPP = @"canShareInWeiboApp";
+
 static NSString * const METHOD_AUTH = @"auth";
+static NSString * const METHOD_AUTHOUT = @"authOut";
 static NSString * const METHOD_SHARETEXT = @"shareText";
 static NSString * const METHOD_SHAREIMAGE = @"shareImage";
 static NSString * const METHOD_SHAREWEBPAGE = @"shareWebpage";
@@ -77,26 +82,47 @@ static NSString * const ARGUMENT_KEY_RESULT_EXPIRESIN = @"expiresIn";
                   result:(FlutterResult)result {
   if ([METHOD_REGISTERAPP isEqualToString:call.method]) {
       NSString * appKey = call.arguments[ARGUMENT_KEY_APPKEY];
+      self.redirectURI = call.arguments[ARGUMENT_KEY_REDIRECTURL];
       [WeiboSDK registerApp:appKey];
       result(nil);
   } else if ([METHOD_ISINSTALLED isEqualToString:call.method]) {
       result([NSNumber numberWithBool:[WeiboSDK isWeiboAppInstalled]]);
-  } else if ([METHOD_AUTH isEqualToString:call.method]) {
+  } else if ([METHOD_CANSHAREINWBAPP isEqualToString:call.method]) {
+      result([NSNumber numberWithBool:[WeiboSDK isCanShareInWeiboAPP]]);
+  }else if ([METHOD_AUTH isEqualToString:call.method]) {
       [self handleAuthCall:call result:result];
+  }else if ([METHOD_AUTHOUT isEqualToString:call.method]) {
+      [self handleAuthOutCall:call result:result];
   } else if ([METHOD_SHARETEXT isEqualToString:call.method]) {
       [self handleShareTextCall:call result:result];
-  } else if ([METHOD_SHAREIMAGE isEqualToString:call.method] ||
-             [METHOD_SHAREWEBPAGE isEqualToString:call.method]) {
+  } else if ([METHOD_SHAREWEBPAGE isEqualToString:call.method]) {
       [self handleShareMediaCall:call result:result];
-  } else {
+  } else if ([METHOD_SHAREIMAGE isEqualToString:call.method]) {
+       [self handleShareImageCall:call result:result];
+   } else {
       result(FlutterMethodNotImplemented);
   }
+}
+
+- (void)request:(WBHttpRequest *)request didFinishLoadingWithResult:(NSString *)result
+{
+    if([request.tag isEqualToString:@"WeiboKitPluginAuthOut"]) {
+        self.accessToken = nil;
+    }
+}
+
+-(void)handleAuthOutCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+    [WeiboSDK logOutWithToken:self.accessToken delegate:self withTag:@"WeiboKitPluginAuthOut"];
+    result(nil);
 }
 
 -(void)handleAuthCall:(FlutterMethodCall*)call result:(FlutterResult)result {
     WBAuthorizeRequest * request = [WBAuthorizeRequest request];
     request.scope = call.arguments[ARGUMENT_KEY_SCOPE];
     request.redirectURI = call.arguments[ARGUMENT_KEY_REDIRECTURL];
+    if (request.redirectURI != nil && request.redirectURI.length > 0) {
+        self.redirectURI = request.redirectURI;
+    }
     request.shouldShowWebViewForAuthIfCannotSSO = YES;
     request.shouldOpenWeiboAppInstallPageIfNotInstalled = NO;
     [WeiboSDK sendRequest:request];
@@ -104,42 +130,72 @@ static NSString * const ARGUMENT_KEY_RESULT_EXPIRESIN = @"expiresIn";
 }
 
 -(void)handleShareTextCall:(FlutterMethodCall*)call result:(FlutterResult)result {
-    WBSendMessageToWeiboRequest * request = [WBSendMessageToWeiboRequest request];
+
     WBMessageObject * message = [WBMessageObject message];
     message.text = call.arguments[ARGUMENT_KEY_TEXT];
-    request.message = message;
+    
+//    WBSendMessageToWeiboRequest * request = [WBSendMessageToWeiboRequest request];
+//    request.message = message;
+
+    WBAuthorizeRequest *authRequest = [WBAuthorizeRequest request];
+    authRequest.redirectURI = self.redirectURI;
+    authRequest.scope = @"all";
+    // 通过这种初始化方式可以使用web分享
+    // 另外，未安装微博客户端，只支持文字分享以及单张图片分享
+    WBSendMessageToWeiboRequest *request = [WBSendMessageToWeiboRequest requestWithMessage:message authInfo:authRequest access_token:self.accessToken];
+    [WeiboSDK sendRequest:request];
+    result(nil);
+}
+
+-(void)handleShareImageCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+    WBMessageObject * message = [WBMessageObject message];
+    message.text = call.arguments[ARGUMENT_KEY_TEXT];
+    WBImageObject * object = [WBImageObject object];
+    FlutterStandardTypedData * imageData = call.arguments[ARGUMENT_KEY_IMAGEDATA];
+    if (imageData != nil) {
+        object.imageData = imageData.data;
+    } else {
+        NSString * imageUri = call.arguments[ARGUMENT_KEY_IMAGEURI];
+        NSURL * imageUrl = [NSURL URLWithString:imageUri];
+        object.imageData = [NSData dataWithContentsOfFile:imageUrl.path];
+    }
+    message.imageObject = object;
+    
+//    WBSendMessageToWeiboRequest * request = [WBSendMessageToWeiboRequest request];
+//    request.message = message;
+
+    WBAuthorizeRequest *authRequest = [WBAuthorizeRequest request];
+    authRequest.redirectURI = self.redirectURI;
+    authRequest.scope = @"all";
+    // 通过这种初始化方式可以使用web分享
+    // 另外，未安装微博客户端，只支持文字分享以及单张图片分享
+    WBSendMessageToWeiboRequest *request = [WBSendMessageToWeiboRequest requestWithMessage:message authInfo:authRequest access_token:self.accessToken];
     [WeiboSDK sendRequest:request];
     result(nil);
 }
 
 -(void)handleShareMediaCall:(FlutterMethodCall*)call result:(FlutterResult)result {
-    WBSendMessageToWeiboRequest * request = [WBSendMessageToWeiboRequest request];
     WBMessageObject * message = [WBMessageObject message];
-    if ([METHOD_SHAREIMAGE isEqualToString:call.method]) {
-        message.text = call.arguments[ARGUMENT_KEY_TEXT];
-        WBImageObject * object = [WBImageObject object];
-        FlutterStandardTypedData * imageData = call.arguments[ARGUMENT_KEY_IMAGEDATA];
-        if (imageData != nil) {
-            object.imageData = imageData.data;
-        } else {
-            NSString * imageUri = call.arguments[ARGUMENT_KEY_IMAGEURI];
-            NSURL * imageUrl = [NSURL URLWithString:imageUri];
-            object.imageData = [NSData dataWithContentsOfFile:imageUrl.path];
-        }
-        message.imageObject = object;
-    } else if ([METHOD_SHAREWEBPAGE isEqualToString:call.method]) {
-        WBWebpageObject * object = [WBWebpageObject object];
-        object.objectID = [[NSUUID UUID].UUIDString stringByReplacingOccurrencesOfString:@"-" withString:@""];
-        object.title = call.arguments[ARGUMENT_KEY_TITLE];
-        object.description = call.arguments[ARGUMENT_KEY_DESCRIPTION];
-        FlutterStandardTypedData * thumbData = call.arguments[ARGUMENT_KEY_THUMBDATA];
-        if (thumbData != nil) {
-            object.thumbnailData = thumbData.data;
-        }
-        object.webpageUrl = call.arguments[ARGUMENT_KEY_WEBPAGEURL];
-        message.mediaObject = object;
+    WBWebpageObject * object = [WBWebpageObject object];
+    object.objectID = [[NSUUID UUID].UUIDString stringByReplacingOccurrencesOfString:@"-" withString:@""];
+    object.title = call.arguments[ARGUMENT_KEY_TITLE];
+    object.description = call.arguments[ARGUMENT_KEY_DESCRIPTION];
+    FlutterStandardTypedData * thumbData = call.arguments[ARGUMENT_KEY_THUMBDATA];
+    if (thumbData != nil) {
+        object.thumbnailData = thumbData.data;
     }
-    request.message = message;
+    object.webpageUrl = call.arguments[ARGUMENT_KEY_WEBPAGEURL];
+    message.mediaObject = object;
+    
+//    WBSendMessageToWeiboRequest * request = [WBSendMessageToWeiboRequest request];
+//    request.message = message;
+    
+    WBAuthorizeRequest *authRequest = [WBAuthorizeRequest request];
+    authRequest.redirectURI = self.redirectURI;
+    authRequest.scope = @"all";
+    // 通过这种初始化方式可以使用web分享
+    // 另外，未安装微博客户端，只支持文字分享以及单张图片分享
+    WBSendMessageToWeiboRequest *request = [WBSendMessageToWeiboRequest requestWithMessage:message authInfo:authRequest access_token:self.accessToken];
     [WeiboSDK sendRequest:request];
     result(nil);
 }
@@ -179,11 +235,18 @@ static NSString * const ARGUMENT_KEY_RESULT_EXPIRESIN = @"expiresIn";
             [dictionary setValue:accessToken forKey:ARGUMENT_KEY_RESULT_ACCESSTOKEN];
             [dictionary setValue:refreshToken forKey:ARGUMENT_KEY_RESULT_REFRESHTOKEN];
             [dictionary setValue:[NSNumber numberWithLongLong:expiresIn] forKey:ARGUMENT_KEY_RESULT_EXPIRESIN];
+            if (accessToken != nil && accessToken.length > 0){
+                self.accessToken = accessToken;
+            }
         }
         [_channel invokeMethod:METHOD_ONAUTHRESP arguments:dictionary];
     } else if ([response isKindOfClass:[WBSendMessageToWeiboResponse class]]) {
         if (response.statusCode == WeiboSDKResponseStatusCodeSuccess) {
             WBSendMessageToWeiboResponse * sendMessageToWeiboResponse = (WBSendMessageToWeiboResponse *) response;
+            NSString *_token = [sendMessageToWeiboResponse.authResponse accessToken];
+            if (_token != nil && _token.length > 0){
+                self.accessToken = _token;
+            }
         }
         [_channel invokeMethod:METHOD_ONSHAREMSGRESP arguments:dictionary];
     }
