@@ -343,8 +343,7 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
 //    }
 
     @Override
-    public void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
+    public boolean onNewIntent(Intent intent) {
         if (mShareHandler == null) {
             mShareHandler = new WbShareHandler(activity);
             mShareHandler.registerApp();
@@ -357,6 +356,7 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
                 mShareHandler.doResultIntent(intent, this);
             }
         }
+        return true;
     }
 
     @Override
