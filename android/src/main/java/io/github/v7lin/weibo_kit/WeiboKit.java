@@ -127,7 +127,6 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
 //            iwbapi = WBAPIFactory.createWBAPI(activity);
 //            iwbapi.registerApp(applicationContext, new AuthInfo(applicationContext, appKey, redirectUrl, scope));
             WbSdk.install(applicationContext, new AuthInfo(applicationContext, appKey, redirectUrl, scope));
-            mSsoHandler = new SsoHandler(activity);
             result.success(null);
         } else if (METHOD_ISINSTALLED.equals(call.method)) {
 //            result.success(iwbapi.isWBAppInstalled());
@@ -145,6 +144,7 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
     }
 
     private void handleAuthCall(MethodCall call, MethodChannel.Result result) {
+        mSsoHandler = new SsoHandler(activity);
         if (mSsoHandler != null){
             mSsoHandler.authorize(new WbAuthListener() {
                 @Override
