@@ -32,7 +32,7 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.PluginRegistry;
 
-public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry.ActivityResultListener, WbShareCallback {
+public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry.ActivityResultListener, PluginRegistry.NewIntentListener, WbShareCallback {
 
     private static class WeiboErrorCode {
         public static final int SUCCESS = 0;//成功
