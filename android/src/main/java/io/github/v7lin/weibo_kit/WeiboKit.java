@@ -4,10 +4,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.sina.weibo.sdk.WbSdk;
 import com.sina.weibo.sdk.api.ImageObject;
 import com.sina.weibo.sdk.api.TextObject;
 import com.sina.weibo.sdk.api.WebpageObject;
@@ -15,10 +18,10 @@ import com.sina.weibo.sdk.api.WeiboMultiMessage;
 import com.sina.weibo.sdk.auth.AuthInfo;
 import com.sina.weibo.sdk.auth.Oauth2AccessToken;
 import com.sina.weibo.sdk.auth.WbAuthListener;
-import com.sina.weibo.sdk.common.UiError;
-import com.sina.weibo.sdk.openapi.IWBAPI;
-import com.sina.weibo.sdk.openapi.WBAPIFactory;
+import com.sina.weibo.sdk.auth.WbConnectErrorMessage;
+import com.sina.weibo.sdk.auth.sso.SsoHandler;
 import com.sina.weibo.sdk.share.WbShareCallback;
+import com.sina.weibo.sdk.share.WbShareHandler;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,7 +32,7 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.PluginRegistry;
 
-public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry.ActivityResultListener {
+public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry.ActivityResultListener, WbShareCallback {
 
     private static class WeiboErrorCode {
         public static final int SUCCESS = 0;//成功
@@ -78,7 +81,10 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
 
     private MethodChannel channel;
 
-    private IWBAPI iwbapi;
+//    private IWBAPI iwbapi;
+
+    private SsoHandler mSsoHandler;
+    private WbShareHandler mShareHandler;
 
     public WeiboKit() {
         super();
@@ -118,11 +124,14 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
             String scope = call.argument(ARGUMENT_KEY_SCOPE);
             String redirectUrl = call.argument(ARGUMENT_KEY_REDIRECTURL);
 
-            iwbapi = WBAPIFactory.createWBAPI(activity);
-            iwbapi.registerApp(applicationContext, new AuthInfo(applicationContext, appKey, redirectUrl, scope));
+//            iwbapi = WBAPIFactory.createWBAPI(activity);
+//            iwbapi.registerApp(applicationContext, new AuthInfo(applicationContext, appKey, redirectUrl, scope));
+            WbSdk.install(applicationContext, new AuthInfo(applicationContext, appKey, redirectUrl, scope));
+            mSsoHandler = new SsoHandler(activity);
             result.success(null);
         } else if (METHOD_ISINSTALLED.equals(call.method)) {
-            result.success(iwbapi.isWBAppInstalled());
+//            result.success(iwbapi.isWBAppInstalled());
+            result.success(WbSdk.isWbInstall(applicationContext));
         } else if (METHOD_AUTH.equals(call.method)) {
             handleAuthCall(call, result);
         } else if (METHOD_SHARETEXT.equals(call.method)) {
@@ -136,17 +145,17 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
     }
 
     private void handleAuthCall(MethodCall call, MethodChannel.Result result) {
-        if (iwbapi != null) {
-            iwbapi.authorize(new WbAuthListener() {
+        if (mSsoHandler != null){
+            mSsoHandler.authorize(new WbAuthListener() {
                 @Override
-                public void onComplete(Oauth2AccessToken token) {
+                public void onSuccess(Oauth2AccessToken oauth2AccessToken) {
                     Map<String, Object> map = new HashMap<>();
-                    if (token.isSessionValid()) {
+                    if (oauth2AccessToken.isSessionValid()) {
                         map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.SUCCESS);
-                        map.put(ARGUMENT_KEY_RESULT_USERID, token.getUid());
-                        map.put(ARGUMENT_KEY_RESULT_ACCESSTOKEN, token.getAccessToken());
-                        map.put(ARGUMENT_KEY_RESULT_REFRESHTOKEN, token.getRefreshToken());
-                        long expiresIn = (long) Math.ceil((token.getExpiresTime() - System.currentTimeMillis()) / 1000.0);
+                        map.put(ARGUMENT_KEY_RESULT_USERID, oauth2AccessToken.getUid());
+                        map.put(ARGUMENT_KEY_RESULT_ACCESSTOKEN, oauth2AccessToken.getToken());
+                        map.put(ARGUMENT_KEY_RESULT_REFRESHTOKEN, oauth2AccessToken.getRefreshToken());
+                        long expiresIn = (long) Math.ceil((oauth2AccessToken.getExpiresTime() - System.currentTimeMillis()) / 1000.0);
                         map.put(ARGUMENT_KEY_RESULT_EXPIRESIN, expiresIn);// 向上取整
                     } else {
                         map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.UNKNOWN);
@@ -157,26 +166,71 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
                 }
 
                 @Override
-                public void onError(UiError uiError) {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.UNKNOWN);
-                    channel.invokeMethod(METHOD_ONAUTHRESP, map);
-                }
-
-                @Override
-                public void onCancel() {
+                public void cancel() {
                     Map<String, Object> map = new HashMap<>();
                     map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.USERCANCEL);
                     if (channel != null) {
                         channel.invokeMethod(METHOD_ONAUTHRESP, map);
                     }
                 }
+
+                @Override
+                public void onFailure(WbConnectErrorMessage wbConnectErrorMessage) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.UNKNOWN);
+                    channel.invokeMethod(METHOD_ONAUTHRESP, map);
+                }
             });
         }
+
+//        if (iwbapi != null) {
+//            iwbapi.authorize(new WbAuthListener() {
+//                @Override
+//                public void onComplete(Oauth2AccessToken token) {
+//                    Map<String, Object> map = new HashMap<>();
+//                    if (token.isSessionValid()) {
+//                        map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.SUCCESS);
+//                        map.put(ARGUMENT_KEY_RESULT_USERID, token.getUid());
+//                        map.put(ARGUMENT_KEY_RESULT_ACCESSTOKEN, token.getAccessToken());
+//                        map.put(ARGUMENT_KEY_RESULT_REFRESHTOKEN, token.getRefreshToken());
+//                        long expiresIn = (long) Math.ceil((token.getExpiresTime() - System.currentTimeMillis()) / 1000.0);
+//                        map.put(ARGUMENT_KEY_RESULT_EXPIRESIN, expiresIn);// 向上取整
+//                    } else {
+//                        map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.UNKNOWN);
+//                    }
+//                    if (channel != null) {
+//                        channel.invokeMethod(METHOD_ONAUTHRESP, map);
+//                    }
+//                }
+//
+//                @Override
+//                public void onError(UiError uiError) {
+//                    Map<String, Object> map = new HashMap<>();
+//                    map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.UNKNOWN);
+//                    channel.invokeMethod(METHOD_ONAUTHRESP, map);
+//                }
+//
+//                @Override
+//                public void onCancel() {
+//                    Map<String, Object> map = new HashMap<>();
+//                    map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.USERCANCEL);
+//                    if (channel != null) {
+//                        channel.invokeMethod(METHOD_ONAUTHRESP, map);
+//                    }
+//                }
+//            });
+//        }
         result.success(null);
     }
 
     private void handleShareTextCall(MethodCall call, MethodChannel.Result result) {
+        if (mShareHandler == null){
+            mShareHandler = new WbShareHandler(activity);
+            mShareHandler.registerApp();
+            mShareHandler.setProgressColor(0xffc4c4c4);
+        }
+
+
         WeiboMultiMessage message = new WeiboMultiMessage();
 
         TextObject object = new TextObject();
@@ -184,13 +238,20 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
 
         message.textObject = object;
 
-        if (iwbapi != null) {
-            iwbapi.shareMessage(message, false);
-        }
+//        if (iwbapi != null) {
+//            iwbapi.shareMessage(message, false);
+//        }
+        mShareHandler.shareMessage(message, false);
         result.success(null);
     }
 
     private void handleShareMediaCall(MethodCall call, MethodChannel.Result result) {
+        if (mShareHandler == null){
+            mShareHandler = new WbShareHandler(activity);
+            mShareHandler.registerApp();
+            mShareHandler.setProgressColor(0xffc4c4c4);
+        }
+
         WeiboMultiMessage message = new WeiboMultiMessage();
 
         if (METHOD_SHAREIMAGE.equals(call.method)) {
@@ -222,53 +283,106 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
             message.mediaObject = object;
         }
 
-        if (iwbapi != null) {
-            iwbapi.shareMessage(message, false);
-        }
+//        if (iwbapi != null) {
+//            iwbapi.shareMessage(message, false);
+//        }
+        mShareHandler.shareMessage(message, false);
         result.success(null);
     }
 
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode) {
-            case 32973:
-                if (iwbapi != null) {
-                    iwbapi.authorizeCallback(requestCode, resultCode, data);
-                }
-                return true;
-            case 10001:
-                if (iwbapi != null) {
-                    iwbapi.doResultIntent(data, new WbShareCallback() {
-                        @Override
-                        public void onComplete() {
-                            Map<String, Object> map = new HashMap<>();
-                            map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.SUCCESS);
-                            if (channel != null) {
-                                channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
-                            }
-                        }
-
-                        @Override
-                        public void onError(UiError uiError) {
-                            Map<String, Object> map = new HashMap<>();
-                            map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.SHARE_IN_SDK_FAILED);
-                            if (channel != null) {
-                                channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
-                            }
-                        }
-
-                        @Override
-                        public void onCancel() {
-                            Map<String, Object> map = new HashMap<>();
-                            map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.USERCANCEL);
-                            if (channel != null) {
-                                channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
-                            }
-                        }
-                    });
-                }
-                return true;
+        if (mSsoHandler != null) {
+            mSsoHandler.authorizeCallBack(requestCode, resultCode, data);
         }
-        return false;
+        return true;
+    }
+
+//    @Override
+//    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+//        switch (requestCode) {
+//            case 32973:
+//                if (iwbapi != null) {
+//                    iwbapi.authorizeCallback(requestCode, resultCode, data);
+//                }
+//                return true;
+//            case 10001:
+//                if (iwbapi != null) {
+//                    iwbapi.doResultIntent(data, new WbShareCallback() {
+//                        @Override
+//                        public void onComplete() {
+//                            Map<String, Object> map = new HashMap<>();
+//                            map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.SUCCESS);
+//                            if (channel != null) {
+//                                channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
+//                            }
+//                        }
+//
+//                        @Override
+//                        public void onError(UiError uiError) {
+//                            Map<String, Object> map = new HashMap<>();
+//                            map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.SHARE_IN_SDK_FAILED);
+//                            if (channel != null) {
+//                                channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
+//                            }
+//                        }
+//
+//                        @Override
+//                        public void onCancel() {
+//                            Map<String, Object> map = new HashMap<>();
+//                            map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.USERCANCEL);
+//                            if (channel != null) {
+//                                channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
+//                            }
+//                        }
+//                    });
+//                }
+//                return true;
+//        }
+//        return false;
+//    }
+
+    @Override
+    public void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (mShareHandler == null) {
+            mShareHandler = new WbShareHandler(activity);
+            mShareHandler.registerApp();
+            mShareHandler.setProgressColor(0xff33b5e5);
+        }
+        Bundle bundle = intent.getExtras();
+        if (bundle != null) {
+            Object object = bundle.get("_weibo_resp_errcode");
+            if (object != null) {
+                mShareHandler.doResultIntent(intent, this);
+            }
+        }
+    }
+
+    @Override
+    public void onWbShareSuccess() {
+        Map<String, Object> map = new HashMap<>();
+        map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.SUCCESS);
+        if (channel != null) {
+            channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
+        }
+    }
+
+    @Override
+    public void onWbShareCancel() {
+        Map<String, Object> map = new HashMap<>();
+        map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.USERCANCEL);
+        if (channel != null) {
+            channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
+        }
+    }
+
+    @Override
+    public void onWbShareFail() {
+        Map<String, Object> map = new HashMap<>();
+        map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.SHARE_IN_SDK_FAILED);
+        if (channel != null) {
+            channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
+        }
     }
 }
