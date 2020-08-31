@@ -10,6 +10,7 @@ class WeiboSdkResp {
   WeiboSdkResp({
     int errorCode,
     this.errorMessage,
+    this.extraInfo,
   }) : errorCode = errorCode ?? SUCCESS;
 
   factory WeiboSdkResp.fromJson(Map<dynamic, dynamic> json) =>
@@ -44,6 +45,7 @@ class WeiboSdkResp {
 
   final int errorCode;
   final String errorMessage;
+  final Map<String, dynamic> extraInfo;
 
   Map<dynamic, dynamic> toJson() => _$WeiboSdkRespToJson(this);
 }

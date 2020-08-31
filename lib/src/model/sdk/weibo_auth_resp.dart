@@ -11,11 +11,12 @@ class WeiboAuthResp extends WeiboSdkResp {
   WeiboAuthResp({
     int errorCode,
     String errorMessage,
+    Map<String, dynamic> extraInfo,
     this.userId,
     this.accessToken,
     this.refreshToken,
     this.expiresIn,
-  }) : super(errorCode: errorCode, errorMessage: errorMessage);
+  }) : super(errorCode: errorCode, errorMessage: errorMessage, extraInfo: extraInfo);
 
   factory WeiboAuthResp.fromJson(Map<dynamic, dynamic> json) =>
       _$WeiboAuthRespFromJson(json);

@@ -10,6 +10,7 @@ WeiboAuthResp _$WeiboAuthRespFromJson(Map json) {
   return WeiboAuthResp(
     errorCode: json['errorCode'] as int,
     errorMessage: json['errorMessage'] as String,
+    extraInfo: json['extraInfo'] as Map<String, dynamic>,
     userId: json['userId'] as String,
     accessToken: json['accessToken'] as String,
     refreshToken: json['refreshToken'] as String,
@@ -21,6 +22,7 @@ Map<String, dynamic> _$WeiboAuthRespToJson(WeiboAuthResp instance) =>
     <String, dynamic>{
       'errorCode': instance.errorCode,
       'errorMessage': instance.errorMessage,
+      'extraInfo': instance.extraInfo,
       'userId': instance.userId,
       'accessToken': instance.accessToken,
       'refreshToken': instance.refreshToken,

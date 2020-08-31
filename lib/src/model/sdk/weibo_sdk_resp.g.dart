@@ -10,6 +10,7 @@ WeiboSdkResp _$WeiboSdkRespFromJson(Map json) {
   return WeiboSdkResp(
     errorCode: json['errorCode'] as int,
     errorMessage: json['errorMessage'] as String,
+    extraInfo: json['extraInfo'] as Map<String, dynamic>,
   );
 }
 
@@ -17,4 +18,5 @@ Map<String, dynamic> _$WeiboSdkRespToJson(WeiboSdkResp instance) =>
     <String, dynamic>{
       'errorCode': instance.errorCode,
       'errorMessage': instance.errorMessage,
+      'extraInfo': instance.extraInfo,
     };
