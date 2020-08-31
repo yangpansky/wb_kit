@@ -27,6 +27,7 @@ class Weibo {
   static const String _ARGUMENT_KEY_APPKEY = 'appKey';
   static const String _ARGUMENT_KEY_SCOPE = 'scope';
   static const String _ARGUMENT_KEY_REDIRECTURL = 'redirectUrl';
+  static const String _ARGUMENT_KEY_EXTRA_INFO = 'extraInfo';
   static const String _ARGUMENT_KEY_TEXT = 'text';
   static const String _ARGUMENT_KEY_TITLE = 'title';
   static const String _ARGUMENT_KEY_DESCRIPTION = 'description';
@@ -99,6 +100,7 @@ class Weibo {
     @required String appKey,
     @required List<String> scope,
     String redirectUrl = _DEFAULT_REDIRECTURL,
+    Map<String, dynamic> extraInfo,
   }) {
     assert(appKey != null && appKey.isNotEmpty);
     assert(scope != null && scope.isNotEmpty);
@@ -108,6 +110,7 @@ class Weibo {
         _ARGUMENT_KEY_APPKEY: appKey,
         _ARGUMENT_KEY_SCOPE: scope.join(','),
         _ARGUMENT_KEY_REDIRECTURL: redirectUrl,
+        if (extraInfo != null) _ARGUMENT_KEY_EXTRA_INFO: extraInfo,
       },
     );
   }
@@ -160,12 +163,14 @@ class Weibo {
   /// 分享 - 文本
   Future<void> shareText({
     @required String text,
+    Map<String, dynamic> extraInfo,
   }) {
     assert(text != null && text.length <= 1024);
     return _channel.invokeMethod<void>(
       _METHOD_SHARETEXT,
       <String, dynamic>{
         _ARGUMENT_KEY_TEXT: text,
+        if (extraInfo != null) _ARGUMENT_KEY_EXTRA_INFO: extraInfo,
       },
     );
   }
@@ -175,6 +180,7 @@ class Weibo {
     String text,
     Uint8List imageData,
     Uri imageUri,
+    Map<String, dynamic> extraInfo,
   }) {
     assert(text == null || text.length <= 1024);
     assert((imageData != null && imageData.lengthInBytes <= 2 * 1024 * 1024) ||
@@ -188,6 +194,7 @@ class Weibo {
         if (text != null && text.isNotEmpty) _ARGUMENT_KEY_TEXT: text,
         if (imageData != null) _ARGUMENT_KEY_IMAGEDATA: imageData,
         if (imageUri != null) _ARGUMENT_KEY_IMAGEURI: imageUri.toString(),
+        if (extraInfo != null) _ARGUMENT_KEY_EXTRA_INFO: extraInfo,
       },
     );
   }
@@ -198,6 +205,7 @@ class Weibo {
     @required String description,
     @required Uint8List thumbData,
     @required String webpageUrl,
+    Map<String, dynamic> extraInfo,
   }) {
     assert(title != null && title.isNotEmpty && title.length <= 512);
     assert(description != null &&
@@ -214,6 +222,7 @@ class Weibo {
         _ARGUMENT_KEY_DESCRIPTION: description,
         _ARGUMENT_KEY_THUMBDATA: thumbData,
         _ARGUMENT_KEY_WEBPAGEURL: webpageUrl,
+        if (extraInfo != null) _ARGUMENT_KEY_EXTRA_INFO: extraInfo,
       },
     );
   }

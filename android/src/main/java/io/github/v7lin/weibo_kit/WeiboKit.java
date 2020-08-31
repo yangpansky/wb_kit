@@ -58,6 +58,7 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
     private static final String ARGUMENT_KEY_APPKEY = "appKey";
     private static final String ARGUMENT_KEY_SCOPE = "scope";
     private static final String ARGUMENT_KEY_REDIRECTURL = "redirectUrl";
+    private static final String ARGUMENT_KEY_EXTRA_INFO = "extraInfo";
     private static final String ARGUMENT_KEY_TEXT = "text";
     private static final String ARGUMENT_KEY_TITLE = "title";
     private static final String ARGUMENT_KEY_DESCRIPTION = "description";
@@ -84,6 +85,8 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
 
     private SsoHandler mSsoHandler;
     private WbShareHandler mShareHandler;
+    private Map mShareExtraInfo;
+
 
     public WeiboKit() {
         super();
@@ -110,6 +113,7 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
     }
 
     public void stopListening() {
+        this.mShareExtraInfo = null;
         channel.setMethodCallHandler(null);
         channel = null;
     }
@@ -142,7 +146,7 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
         }
     }
 
-    private void handleAuthCall(MethodCall call, MethodChannel.Result result) {
+    private void handleAuthCall(final MethodCall call, MethodChannel.Result result) {
         mSsoHandler = new SsoHandler(activity);
         if (mSsoHandler != null){
             mSsoHandler.authorize(new WbAuthListener() {
@@ -159,6 +163,10 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
                     } else {
                         map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.UNKNOWN);
                     }
+                    Map extraInfo = call.argument(ARGUMENT_KEY_EXTRA_INFO);
+                    if (extraInfo != null){
+                        map.put(ARGUMENT_KEY_EXTRA_INFO, extraInfo);
+                    }
                     if (channel != null) {
                         channel.invokeMethod(METHOD_ONAUTHRESP, map);
                     }
@@ -168,6 +176,10 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
                 public void cancel() {
                     Map<String, Object> map = new HashMap<>();
                     map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.USERCANCEL);
+                    Map extraInfo = call.argument(ARGUMENT_KEY_EXTRA_INFO);
+                    if (extraInfo != null){
+                        map.put(ARGUMENT_KEY_EXTRA_INFO, extraInfo);
+                    }
                     if (channel != null) {
                         channel.invokeMethod(METHOD_ONAUTHRESP, map);
                     }
@@ -177,6 +189,10 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
                 public void onFailure(WbConnectErrorMessage wbConnectErrorMessage) {
                     Map<String, Object> map = new HashMap<>();
                     map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.UNKNOWN);
+                    Map extraInfo = call.argument(ARGUMENT_KEY_EXTRA_INFO);
+                    if (extraInfo != null){
+                        map.put(ARGUMENT_KEY_EXTRA_INFO, extraInfo);
+                    }
                     channel.invokeMethod(METHOD_ONAUTHRESP, map);
                 }
             });
@@ -240,6 +256,7 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
 //        if (iwbapi != null) {
 //            iwbapi.shareMessage(message, false);
 //        }
+        this.mShareExtraInfo = call.argument(ARGUMENT_KEY_EXTRA_INFO);
         mShareHandler.shareMessage(message, false);
         result.success(null);
     }
@@ -285,6 +302,7 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
 //        if (iwbapi != null) {
 //            iwbapi.shareMessage(message, false);
 //        }
+        this.mShareExtraInfo = call.argument(ARGUMENT_KEY_EXTRA_INFO);
         mShareHandler.shareMessage(message, false);
         result.success(null);
     }
@@ -362,6 +380,9 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
     public void onWbShareSuccess() {
         Map<String, Object> map = new HashMap<>();
         map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.SUCCESS);
+        if (this.mShareExtraInfo != null){
+            map.put(ARGUMENT_KEY_EXTRA_INFO, this.mShareExtraInfo);
+        }
         if (channel != null) {
             channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
         }
@@ -371,6 +392,9 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
     public void onWbShareCancel() {
         Map<String, Object> map = new HashMap<>();
         map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.USERCANCEL);
+        if (this.mShareExtraInfo != null){
+            map.put(ARGUMENT_KEY_EXTRA_INFO, this.mShareExtraInfo);
+        }
         if (channel != null) {
             channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
         }
@@ -380,6 +404,9 @@ public class WeiboKit implements MethodChannel.MethodCallHandler, PluginRegistry
     public void onWbShareFail() {
         Map<String, Object> map = new HashMap<>();
         map.put(ARGUMENT_KEY_RESULT_ERRORCODE, WeiboErrorCode.SHARE_IN_SDK_FAILED);
+        if (this.mShareExtraInfo != null){
+            map.put(ARGUMENT_KEY_EXTRA_INFO, this.mShareExtraInfo);
+        }
         if (channel != null) {
             channel.invokeMethod(METHOD_ONSHAREMSGRESP, map);
         }

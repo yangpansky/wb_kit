@@ -54,6 +54,7 @@ static NSString * const METHOD_ONSHAREMSGRESP = @"onShareMsgResp";
 static NSString * const ARGUMENT_KEY_APPKEY = @"appKey";
 static NSString * const ARGUMENT_KEY_SCOPE = @"scope";
 static NSString * const ARGUMENT_KEY_REDIRECTURL = @"redirectUrl";
+static NSString * const ARGUMENT_KEY_EXTRA_INFO = @"extraInfo";
 static NSString * const ARGUMENT_KEY_TEXT = @"text";
 static NSString * const ARGUMENT_KEY_TITLE = @"title";
 static NSString * const ARGUMENT_KEY_DESCRIPTION = @"description";
@@ -123,6 +124,9 @@ static NSString * const ARGUMENT_KEY_RESULT_EXPIRESIN = @"expiresIn";
     if (request.redirectURI != nil && request.redirectURI.length > 0) {
         self.redirectURI = request.redirectURI;
     }
+    if ([call.arguments[ARGUMENT_KEY_EXTRA_INFO] isKindOfClass:[NSDictionary class]]) {
+        request.userInfo = [NSDictionary dictionaryWithDictionary:call.arguments[ARGUMENT_KEY_EXTRA_INFO]];
+    }
     request.shouldShowWebViewForAuthIfCannotSSO = YES;
     request.shouldOpenWeiboAppInstallPageIfNotInstalled = NO;
     [WeiboSDK sendRequest:request];
@@ -143,6 +147,9 @@ static NSString * const ARGUMENT_KEY_RESULT_EXPIRESIN = @"expiresIn";
     // 通过这种初始化方式可以使用web分享
     // 另外，未安装微博客户端，只支持文字分享以及单张图片分享
     WBSendMessageToWeiboRequest *request = [WBSendMessageToWeiboRequest requestWithMessage:message authInfo:authRequest access_token:self.accessToken];
+    if ([call.arguments[ARGUMENT_KEY_EXTRA_INFO] isKindOfClass:[NSDictionary class]]) {
+        request.userInfo = [NSDictionary dictionaryWithDictionary:call.arguments[ARGUMENT_KEY_EXTRA_INFO]];
+    }
     [WeiboSDK sendRequest:request];
     result(nil);
 }
@@ -170,6 +177,9 @@ static NSString * const ARGUMENT_KEY_RESULT_EXPIRESIN = @"expiresIn";
     // 通过这种初始化方式可以使用web分享
     // 另外，未安装微博客户端，只支持文字分享以及单张图片分享
     WBSendMessageToWeiboRequest *request = [WBSendMessageToWeiboRequest requestWithMessage:message authInfo:authRequest access_token:self.accessToken];
+    if ([call.arguments[ARGUMENT_KEY_EXTRA_INFO] isKindOfClass:[NSDictionary class]]) {
+        request.userInfo = [NSDictionary dictionaryWithDictionary:call.arguments[ARGUMENT_KEY_EXTRA_INFO]];
+    }
     [WeiboSDK sendRequest:request];
     result(nil);
 }
@@ -196,6 +206,9 @@ static NSString * const ARGUMENT_KEY_RESULT_EXPIRESIN = @"expiresIn";
     // 通过这种初始化方式可以使用web分享
     // 另外，未安装微博客户端，只支持文字分享以及单张图片分享
     WBSendMessageToWeiboRequest *request = [WBSendMessageToWeiboRequest requestWithMessage:message authInfo:authRequest access_token:self.accessToken];
+    if ([call.arguments[ARGUMENT_KEY_EXTRA_INFO] isKindOfClass:[NSDictionary class]]) {
+        request.userInfo = [NSDictionary dictionaryWithDictionary:call.arguments[ARGUMENT_KEY_EXTRA_INFO]];
+    }
     [WeiboSDK sendRequest:request];
     result(nil);
 }
@@ -224,6 +237,9 @@ static NSString * const ARGUMENT_KEY_RESULT_EXPIRESIN = @"expiresIn";
 -(void)didReceiveWeiboResponse:(WBBaseResponse *)response {
     NSMutableDictionary * dictionary = [NSMutableDictionary dictionary];
     [dictionary setValue:[NSNumber numberWithInteger:response.statusCode] forKey:ARGUMENT_KEY_RESULT_ERRORCODE];
+    if (response.userInfo != nil && [response.userInfo isKindOfClass:[NSDictionary class]]) {
+        [dictionary setValue:[NSDictionary dictionaryWithDictionary:response.userInfo] forKey:ARGUMENT_KEY_EXTRA_INFO];
+    }
     if ([response isKindOfClass:[WBAuthorizeResponse class]]) {
         if (response.statusCode == WeiboSDKResponseStatusCodeSuccess) {
             WBAuthorizeResponse * authorizeResponse = (WBAuthorizeResponse *) response;
