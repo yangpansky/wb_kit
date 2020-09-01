@@ -71,12 +71,16 @@ class Weibo {
   Future<dynamic> _handleMethod(MethodCall call) async {
     switch (call.method) {
       case _METHOD_ONAUTHRESP:
-        _authRespStreamController.add(
-            WeiboAuthResp.fromJson(call.arguments as Map<dynamic, dynamic>));
+        print('_METHOD_ONAUTHRESP');
+        WeiboAuthResp resp = WeiboAuthResp.fromJson(call.arguments as Map<dynamic, dynamic>);
+        print('_METHOD_ONAUTHRESP resp: $resp');
+        _authRespStreamController.add(resp);
         break;
       case _METHOD_ONSHAREMSGRESP:
-        _shareMsgRespStreamController.add(
-            WeiboSdkResp.fromJson(call.arguments as Map<dynamic, dynamic>));
+        print('_METHOD_ONSHAREMSGRESP');
+        WeiboSdkResp resp = WeiboSdkResp.fromJson(call.arguments as Map<dynamic, dynamic>);
+        print('_METHOD_ONSHAREMSGRESP resp: $resp');
+        _shareMsgRespStreamController.add(resp);
         break;
     }
   }
