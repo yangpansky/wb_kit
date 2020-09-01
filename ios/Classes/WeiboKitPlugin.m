@@ -237,8 +237,8 @@ static NSString * const ARGUMENT_KEY_RESULT_EXPIRESIN = @"expiresIn";
 -(void)didReceiveWeiboResponse:(WBBaseResponse *)response {
     NSMutableDictionary * dictionary = [NSMutableDictionary dictionary];
     [dictionary setValue:[NSNumber numberWithInteger:response.statusCode] forKey:ARGUMENT_KEY_RESULT_ERRORCODE];
-    if (response.userInfo != nil && [response.userInfo isKindOfClass:[NSDictionary class]]) {
-        [dictionary setValue:[NSDictionary dictionaryWithDictionary:response.userInfo] forKey:ARGUMENT_KEY_EXTRA_INFO];
+    if (response.requestUserInfo != nil && [response.requestUserInfo isKindOfClass:[NSDictionary class]]) {
+        [dictionary setValue:[NSDictionary dictionaryWithDictionary:response.requestUserInfo] forKey:ARGUMENT_KEY_EXTRA_INFO];
     }
     if ([response isKindOfClass:[WBAuthorizeResponse class]]) {
         if (response.statusCode == WeiboSDKResponseStatusCodeSuccess) {
