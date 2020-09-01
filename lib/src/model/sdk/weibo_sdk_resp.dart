@@ -45,7 +45,7 @@ class WeiboSdkResp {
 
   final int errorCode;
   final String errorMessage;
-  final Map<String, dynamic> extraInfo;
+  final Map<dynamic, dynamic> extraInfo;
 
   Map<dynamic, dynamic> toJson() => _$WeiboSdkRespToJson(this);
 }

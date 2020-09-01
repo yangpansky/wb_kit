@@ -11,7 +11,7 @@ class WeiboAuthResp extends WeiboSdkResp {
   WeiboAuthResp({
     int errorCode,
     String errorMessage,
-    Map<String, dynamic> extraInfo,
+    Map<dynamic, dynamic> extraInfo,
     this.userId,
     this.accessToken,
     this.refreshToken,

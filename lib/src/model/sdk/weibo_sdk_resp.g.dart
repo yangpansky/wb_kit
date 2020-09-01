@@ -10,7 +10,7 @@ WeiboSdkResp _$WeiboSdkRespFromJson(Map json) {
   return WeiboSdkResp(
     errorCode: json['errorCode'] as int,
     errorMessage: json['errorMessage'] as String,
-    extraInfo: json['extraInfo'] as Map<String, dynamic>,
+    extraInfo: json['extraInfo'] as Map<dynamic, dynamic>,
   );
 }
 

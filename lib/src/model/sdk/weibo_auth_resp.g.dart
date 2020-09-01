@@ -10,7 +10,7 @@ WeiboAuthResp _$WeiboAuthRespFromJson(Map json) {
   return WeiboAuthResp(
     errorCode: json['errorCode'] as int,
     errorMessage: json['errorMessage'] as String,
-    extraInfo: json['extraInfo'] as Map<String, dynamic>,
+    extraInfo: json['extraInfo'] as Map<dynamic, dynamic>,
     userId: json['userId'] as String,
     accessToken: json['accessToken'] as String,
     refreshToken: json['refreshToken'] as String,
